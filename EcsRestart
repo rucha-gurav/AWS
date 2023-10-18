@@ -1,0 +1,43 @@
+import json
+import boto3
+
+# Initialize the ECS client
+ecs = boto3.client('ecs')
+
+def lambda_handler(event, context):
+    # Parse the payload sent by Datadog
+    datadog_payload = json.loads(event['body'])
+
+    # Check if the alert is triggered and meets your criteria
+    if datadog_payload.get('event_type') == 'triggered':
+        alert_name = datadog_payload.get('title')
+        
+        # Define a list of alert names that should trigger the action
+        allowed_alerts = ["Alert1", "Alert2", "Alert3"]  # Add the specific alerts you want to trigger the function
+
+        if alert_name in allowed_alerts:
+            # Define your ECS service and cluster names
+            cluster_name = 'your-cluster-name'
+            service_name = 'your-service-name'
+
+            try:
+                # Restart the ECS service
+                response = ecs.update_service(
+                    cluster=cluster_name,
+                    service=service_name,
+                    forceNewDeployment=True
+                )
+                return {
+                    "statusCode": 200,
+                    "body": json.dumps({"message": "ECS service restarted successfully"})
+                }
+            except Exception as e:
+                return {
+                    "statusCode": 500,
+                    "body": json.dumps({"error": f"Failed to restart ECS service: {str(e)"})
+                }
+
+    return {
+        "statusCode": 200,
+        "body": json.dumps({"message": "No alert triggered or alert not in the allowed list"})
+    }
